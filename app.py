@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from seotool import briefs, graph, gsc, preaudit, recommendations, semantic
+from seotool import briefs, data_imports, graph, gsc, preaudit, recommendations, semantic
 from seotool.cli import db_for
 from seotool.crawler import crawl
 from seotool.store import Store
@@ -316,27 +316,109 @@ if selected_db:
     with tabs[6]:
         st.subheader("Sources de données")
         st.caption(
-            "Cet espace sert à alimenter ou actualiser le cerveau GSC du client. "
-            "Les analyses produites à partir de ces données apparaissent dans Vue d'ensemble, "
-            "Opportunités contenu, Priorités, Maillage et Brief."
+            "Ajoutez seulement les sources dont vous disposez. Le crawl est le socle ; "
+            "GSC et Semrush enrichissent progressivement l'analyse."
         )
-        uploaded = st.file_uploader("CSV GSC", type=["csv"])
-        period = st.text_input("Période", placeholder="2026-07 ou 8m-ending-2026-08")
-        if uploaded and st.button("Importer dans ce client"):
-            target = IMPORT_DIR / safe_name(uploaded.name)
-            target.write_bytes(uploaded.getvalue())
-            try:
-                count = gsc.import_csv(store, target, period=period or None)
-            except Exception as exc:
-                st.error(str(exc))
-            else:
-                st.success(f"{count} relations importées.")
-                st.rerun()
+
+        st.markdown("#### Où en est ce projet ?")
+        source_counts = {
+            "Crawl": scalar(store, "SELECT COUNT(*) FROM pages"),
+            "GSC URL × requête": scalar(store, "SELECT COUNT(*) FROM gsc"),
+            "Positions Semrush": scalar(store, "SELECT COUNT(*) FROM semrush_keywords"),
+            "Keyword Gap": scalar(store, "SELECT COUNT(*) FROM keyword_gap"),
+            "Backlinks": scalar(store, "SELECT COUNT(*) FROM backlinks"),
+        }
+        cols = st.columns(5)
+        for col, (name, count) in zip(cols, source_counts.items()):
+            col.metric(name, count, "chargé" if count else "manquant")
+
+        st.info(
+            "**Parcours recommandé :** 1. lancez le crawl dans Administration ; "
+            "2. importez GSC si disponible ; 3. ajoutez les positions Semrush ; "
+            "4. complétez avec Keyword Gap et Backlinks pour la concurrence et l'off-site."
+        )
+
+        def save_upload(upload):
+            target = IMPORT_DIR / safe_name(upload.name)
+            target.write_bytes(upload.getvalue())
+            return target
+
+        with st.expander("1 — GSC : requêtes associées aux URL", expanded=True):
+            st.markdown(
+                "**But :** repérer les pages à optimiser, les requêtes presque en première page "
+                "et les risques de cannibalisation.\n\n"
+                "**Colonnes minimales :** `URL`, `Query`, `Impressions`, `Url Clicks`, "
+                "`URL CTR`, `Average Position`. Une ligne doit relier une URL à une requête."
+            )
+            uploaded = st.file_uploader("Choisir le CSV GSC", type=["csv"], key="gsc_upload")
+            period = st.text_input("Période couverte", placeholder="ex. 8m-ending-2026-08", key="gsc_period")
+            if st.button("Importer les données GSC", disabled=not bool(uploaded)):
+                try:
+                    count = gsc.import_csv(store, save_upload(uploaded), period=period or None)
+                except Exception as exc:
+                    st.error(str(exc))
+                else:
+                    st.success(f"{count} relations URL × requête importées.")
+                    st.rerun()
+
+        with st.expander("2 — Semrush : positions organiques et URL"):
+            st.markdown(
+                "**Export à choisir :** Organic Research / Positions.\n\n"
+                "**Colonnes minimales :** `Keyword`, `URL`, `Position`. Recommandées : "
+                "`Volume`, `Traffic`, `Keyword Difficulty`, `CPC`, `Intent`."
+            )
+            upload = st.file_uploader("Choisir l'export Positions Semrush", type=["csv"], key="semrush_pos")
+            label = st.text_input("Date ou période de l'export", key="semrush_pos_period")
+            if st.button("Importer les positions Semrush", disabled=not bool(upload)):
+                try:
+                    count = data_imports.import_semrush_keywords(store, save_upload(upload), label or "non précisé")
+                except Exception as exc:
+                    st.error(str(exc))
+                else:
+                    st.success(f"{count} positions importées.")
+                    st.rerun()
+
+        with st.expander("3 — Semrush : Keyword Gap et concurrents"):
+            st.markdown(
+                "**But :** trouver les mots-clés couverts par les concurrents mais absents ou faibles "
+                "sur le domaine. Exportez le tableau Keyword Gap en CSV.\n\n"
+                "**Colonne minimale :** `Keyword`. Recommandées : `Competitor`, positions du domaine "
+                "et du concurrent, `Volume`, `KD`, `Intent`, `Status`."
+            )
+            upload = st.file_uploader("Choisir l'export Keyword Gap", type=["csv"], key="semrush_gap")
+            label = st.text_input("Date ou période du gap", key="semrush_gap_period")
+            if st.button("Importer le Keyword Gap", disabled=not bool(upload)):
+                try:
+                    count = data_imports.import_keyword_gap(store, save_upload(upload), label or "non précisé")
+                except Exception as exc:
+                    st.error(str(exc))
+                else:
+                    st.success(f"{count} opportunités concurrentielles importées.")
+                    st.rerun()
+
+        with st.expander("4 — Semrush : backlinks et domaines référents"):
+            st.markdown(
+                "**But :** alimenter le volet off-site : volume de liens, domaines référents, "
+                "autorité, ancres et liens follow/nofollow.\n\n"
+                "**Colonnes minimales :** `Source URL`, `Target URL`. Recommandées : "
+                "`Source Domain`, `Authority Score`, `Anchor`, `Link Type`, `First Seen`, `Last Seen`."
+            )
+            upload = st.file_uploader("Choisir l'export Backlinks", type=["csv"], key="semrush_backlinks")
+            label = st.text_input("Date ou période des backlinks", key="semrush_backlinks_period")
+            if st.button("Importer les backlinks", disabled=not bool(upload)):
+                try:
+                    count = data_imports.import_backlinks(store, save_upload(upload), label or "non précisé")
+                except Exception as exc:
+                    st.error(str(exc))
+                else:
+                    st.success(f"{count} backlinks importés.")
+                    st.rerun()
+
         periods = store.df(
             """SELECT period période, COUNT(*) lignes, SUM(impressions) impressions,
                       SUM(clicks) clics FROM gsc GROUP BY period ORDER BY period DESC"""
         )
-        st.subheader("Périodes disponibles")
+        st.subheader("Historique GSC disponible")
         st.dataframe(periods, width="stretch", hide_index=True)
 
     store.close()
