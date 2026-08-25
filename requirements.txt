@@ -1,0 +1,30 @@
+# --- coeur ---
+httpx[http2]>=0.27
+selectolax>=0.3.21
+lxml>=5.2
+beautifulsoup4>=4.12
+networkx>=3.3
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+tabulate>=0.9
+openpyxl>=3.1
+python-docx>=1.1
+
+# --- rendu JS (optionnel) : puis `playwright install chromium`
+playwright>=1.44
+
+# --- embeddings (optionnel, CPU ok)
+sentence-transformers>=3.0
+
+# --- Search Console
+google-api-python-client>=2.130
+google-auth-oauthlib>=1.2
+
+# --- génération de briefs
+anthropic>=0.34
+
+# --- plateforme web (phase 2)
+fastapi>=0.111
+uvicorn>=0.30
+streamlit>=1.36
