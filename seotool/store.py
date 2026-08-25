@@ -83,6 +83,29 @@ CREATE TABLE IF NOT EXISTS gsc (
 CREATE INDEX IF NOT EXISTS idx_gsc_page ON gsc(page);
 CREATE INDEX IF NOT EXISTS idx_gsc_query ON gsc(query);
 
+-- Exports Semrush : positions organiques du domaine
+CREATE TABLE IF NOT EXISTS semrush_keywords (
+    domain TEXT, page TEXT, keyword TEXT, position REAL, volume REAL,
+    traffic REAL, keyword_difficulty REAL, cpc REAL, intent TEXT,
+    period TEXT, PRIMARY KEY (domain, page, keyword, period)
+);
+CREATE INDEX IF NOT EXISTS idx_semrush_keyword ON semrush_keywords(keyword);
+
+-- Keyword Gap : opportunités observées chez les concurrents
+CREATE TABLE IF NOT EXISTS keyword_gap (
+    keyword TEXT, competitor TEXT, domain_position REAL,
+    competitor_position REAL, volume REAL, keyword_difficulty REAL,
+    intent TEXT, status TEXT, period TEXT,
+    PRIMARY KEY (keyword, competitor, period)
+);
+
+-- Backlinks Semrush : données off-site importées
+CREATE TABLE IF NOT EXISTS backlinks (
+    source_url TEXT, target_url TEXT, source_domain TEXT, authority_score REAL,
+    anchor TEXT, follow INTEGER, first_seen TEXT, last_seen TEXT, period TEXT,
+    PRIMARY KEY (source_url, target_url, anchor, period)
+);
+
 -- suggestions de maillage produites par le module sémantique
 CREATE TABLE IF NOT EXISTS link_suggestions (
     source      TEXT,
