@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from seotool import briefs, graph, gsc, recommendations, semantic
+from seotool import briefs, graph, gsc, preaudit, recommendations, semantic
 from seotool.cli import db_for
 from seotool.crawler import crawl
 from seotool.store import Store
@@ -49,6 +49,28 @@ def require_password() -> None:
 
 require_password()
 
+st.markdown("""
+<style>
+    [data-testid="stHeader"] {background: rgba(255,255,255,.88); backdrop-filter: blur(10px);}
+    .block-container {padding-top: 2rem; padding-bottom: 4rem; max-width: 1450px;}
+    .hero {padding: 2rem 2.2rem; border-radius: 24px; color: white; margin-bottom: 1.2rem;
+           background: linear-gradient(125deg,#172554 0%,#4338ca 55%,#7c3aed 100%);
+           box-shadow: 0 18px 45px rgba(49,46,129,.22);}
+    .hero h1 {font-size: 2.25rem; margin: 0 0 .4rem 0; color: white;}
+    .hero p {font-size: 1.05rem; opacity: .9; margin: 0; max-width: 850px;}
+    .process-card {border: 1px solid #e2e8f0; border-radius: 18px; padding: 1.15rem;
+                   min-height: 145px; background: linear-gradient(180deg,#fff,#f8fafc);}
+    .process-card .number {display:inline-block; color:#4338ca; background:#eef2ff;
+                          border-radius:999px; padding:.2rem .65rem; font-weight:700;}
+    .process-card h3 {font-size:1.02rem; margin:.75rem 0 .35rem;}
+    .process-card p {color:#64748b; font-size:.9rem; margin:0;}
+    [data-testid="stMetric"] {background:white; border:1px solid #e2e8f0; padding:1rem;
+                             border-radius:16px; box-shadow:0 7px 20px rgba(15,23,42,.05);}
+    .need-box {padding:1rem 1.1rem; border-left:4px solid #6366f1; background:#f8fafc;
+               border-radius:0 14px 14px 0; margin:.35rem 0;}
+</style>
+""", unsafe_allow_html=True)
+
 
 def databases() -> list[Path]:
     return sorted(DATA_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -62,8 +84,13 @@ def safe_name(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]+", "-", value).strip("-.") or "gsc.csv"
 
 
-st.title("SEO Ecosystem")
-st.caption("Crawl, GSC, priorités, maillage et briefs — en local, une base par client.")
+st.markdown("""
+<div class="hero">
+  <h1>SEO Ecosystem</h1>
+  <p>Transformez un crawl et vos données SEO en diagnostics visuels, opportunités éditoriales,
+  recommandations de maillage et briefs directement actionnables.</p>
+</div>
+""", unsafe_allow_html=True)
 
 dbs = databases()
 if not dbs:
@@ -75,13 +102,35 @@ else:
     selected_db = labels[selected_name]
     st.sidebar.caption(str(selected_db.relative_to(ROOT)))
 
-tabs = st.tabs(["Vue d'ensemble", "Opportunités contenu", "Priorités", "Maillage",
-                "Brief", "Import GSC", "Administration"])
+tabs = st.tabs(["Accueil", "Pré-audit", "Opportunités contenu", "Priorités", "Maillage",
+                "Brief", "Sources de données", "Administration"])
 
 if selected_db:
     store = Store(selected_db)
 
     with tabs[0]:
+        st.subheader("Comment utiliser l'outil ?")
+        process_cols = st.columns(4)
+        steps = [
+            ("01", "Créer ou choisir un projet", "Un domaine correspond à une base client séparée."),
+            ("02", "Collecter les données", "Lancez le crawl puis ajoutez GSC ou vos exports disponibles."),
+            ("03", "Comprendre les priorités", "Consultez le pré-audit, les opportunités et le maillage."),
+            ("04", "Passer à l'action", "Téléchargez les recommandations, rapports et briefs Word."),
+        ]
+        for col, (number, title, copy) in zip(process_cols, steps):
+            col.markdown(
+                f'<div class="process-card"><span class="number">{number}</span>'
+                f'<h3>{title}</h3><p>{copy}</p></div>', unsafe_allow_html=True,
+            )
+
+        st.subheader("Choisissez selon votre besoin")
+        n1, n2, n3 = st.columns(3)
+        n1.markdown('<div class="need-box"><b>Convaincre un prospect</b><br>Ouvrez Pré-audit pour une synthèse illustrée et téléchargeable.</div>', unsafe_allow_html=True)
+        n2.markdown('<div class="need-box"><b>Trouver de la croissance</b><br>Ouvrez Opportunités contenu pour créer, optimiser ou consolider.</div>', unsafe_allow_html=True)
+        n3.markdown('<div class="need-box"><b>Produire un contenu</b><br>Ouvrez Brief, saisissez le sujet puis téléchargez le document Word.</div>', unsafe_allow_html=True)
+
+        st.divider()
+        st.subheader("Vue rapide du projet")
         pages = scalar(store, "SELECT COUNT(*) FROM pages WHERE status=200")
         gsc_rows = scalar(store, "SELECT COUNT(*) FROM gsc")
         suggestions = scalar(store, "SELECT COUNT(*) FROM link_suggestions")
@@ -112,6 +161,50 @@ if selected_db:
         st.dataframe(top, width="stretch", hide_index=True)
 
     with tabs[1]:
+        st.subheader("Pré-audit avant-vente")
+        st.caption("Une lecture rapide, illustrée et explicable des principaux signaux du site.")
+        audit = preaudit.snapshot(store)
+        a1, a2, a3, a4 = st.columns(4)
+        a1.metric("Score de contrôle", f"{audit['score']}/100")
+        a2.metric("URL observées", audit["total"])
+        a3.metric("Erreurs HTTP", audit["errors"])
+        a4.metric("Pages orphelines", audit["orphans"])
+
+        left, right = st.columns(2)
+        with left:
+            st.markdown("#### Qualité par dimension")
+            score_frame = pd.DataFrame(
+                {"dimension": list(audit["scores"]), "score": list(audit["scores"].values())}
+            ).set_index("dimension")
+            st.bar_chart(score_frame, horizontal=True)
+        with right:
+            st.markdown("#### Répartition des statuts HTTP")
+            if len(audit["status"]):
+                st.bar_chart(audit["status"].set_index("catégorie"))
+            st.markdown("#### Profondeur de clic")
+            if len(audit["depths"]):
+                st.bar_chart(audit["depths"].set_index("profondeur"))
+
+        st.markdown("#### Erreurs et points de vigilance")
+        st.dataframe(audit["issues"], width="stretch", hide_index=True)
+        st.markdown("#### Premières actions recommandées")
+        st.dataframe(
+            audit["priorities"], width="stretch", hide_index=True,
+            column_config={"url": st.column_config.LinkColumn("URL")},
+        )
+        audit_md = preaudit.report_markdown(audit, selected_db.stem)
+        pa1, pa2 = st.columns(2)
+        pa1.download_button("Télécharger le pré-audit (.md)", audit_md.encode("utf-8"),
+                            "pre-audit-seo.md", "text/markdown")
+        pa2.download_button(
+            "Télécharger le pré-audit Word (.docx)",
+            briefs.markdown_to_docx(audit_md, f"Pré-audit SEO — {selected_db.stem}"),
+            "pre-audit-seo.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        st.info("Le score est une synthèse interne des contrôles affichés, pas une note Google.")
+
+    with tabs[2]:
         st.subheader("Opportunités de création et d'optimisation")
         st.caption("Vue éditoriale uniquement : les erreurs techniques restent dans Priorités.")
         content_min_impr = st.number_input(
@@ -154,7 +247,7 @@ if selected_db:
             "Vérifie toujours l'intention et le risque de cannibalisation avant publication."
         )
 
-    with tabs[2]:
+    with tabs[3]:
         st.subheader("File d'actions priorisée")
         min_impr = st.number_input("Impressions minimales", min_value=0, value=100, step=50)
         recs = recommendations.build(store, int(min_impr))
@@ -167,7 +260,7 @@ if selected_db:
                            "priorites-seo.csv", "text/csv")
         st.caption("Les intentions sont des inférences avec un niveau de confiance, pas des certitudes SERP.")
 
-    with tabs[3]:
+    with tabs[4]:
         st.subheader("Suggestions de maillage")
         links = store.df(
             """SELECT source, target, anchor, ROUND(score,3) score, evidence contexte
@@ -188,7 +281,7 @@ if selected_db:
             st.success(f"{count} suggestions recalculées.")
             st.rerun()
 
-    with tabs[4]:
+    with tabs[5]:
         st.subheader("Brief à la demande")
         keyword = st.text_input("Mot-clé ou sujet", placeholder="ex. assurance hospitalisation")
         kind = st.selectbox("Format demandé", ["Automatique", "Article", "Landing page", "Article sponsorisé"])
@@ -220,8 +313,8 @@ if selected_db:
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
 
-    with tabs[5]:
-        st.subheader("Importer un export URL × Query")
+    with tabs[6]:
+        st.subheader("Sources de données")
         st.caption(
             "Cet espace sert à alimenter ou actualiser le cerveau GSC du client. "
             "Les analyses produites à partir de ces données apparaissent dans Vue d'ensemble, "
@@ -249,11 +342,11 @@ if selected_db:
     store.close()
 
 else:
-    for tab in tabs[:6]:
+    for tab in tabs[:7]:
         with tab:
             st.info("Crée d'abord un projet dans Administration.")
 
-with tabs[6]:
+with tabs[7]:
     st.subheader("Créer ou actualiser un projet")
     site_url = st.text_input("URL du site", placeholder="https://exemple.fr")
     max_pages = st.number_input("Maximum d'URL", min_value=10, max_value=10000, value=300, step=50)
