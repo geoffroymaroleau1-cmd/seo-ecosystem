@@ -1,6 +1,8 @@
 """Interface locale Streamlit de SEO Ecosystem."""
 from __future__ import annotations
 
+import hmac
+import os
 import re
 from pathlib import Path
 
@@ -20,6 +22,32 @@ DATA_DIR.mkdir(exist_ok=True)
 IMPORT_DIR.mkdir(exist_ok=True)
 
 st.set_page_config(page_title="SEO Ecosystem", page_icon="🧭", layout="wide")
+
+
+def require_password() -> None:
+    """Protège l'interface si APP_PASSWORD est défini dans les secrets."""
+    expected = os.environ.get("APP_PASSWORD")
+    try:
+        expected = st.secrets.get("APP_PASSWORD", expected)
+    except (FileNotFoundError, KeyError):
+        pass
+    if not expected:
+        return  # mode local sans secret
+    if st.session_state.get("authenticated"):
+        return
+    st.title("SEO Ecosystem")
+    st.caption("Accès protégé")
+    supplied = st.text_input("Mot de passe", type="password")
+    if st.button("Se connecter"):
+        if hmac.compare_digest(supplied, str(expected)):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Mot de passe incorrect.")
+    st.stop()
+
+
+require_password()
 
 
 def databases() -> list[Path]:
