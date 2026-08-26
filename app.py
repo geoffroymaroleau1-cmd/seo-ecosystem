@@ -118,6 +118,16 @@ st.markdown("""
     .need-card .emoji {font-size:1.25rem;}.need-card strong {display:block; margin:.4rem 0;}
     .need-card p {font-size:.84rem; line-height:1.45; color:var(--muted); margin:.2rem 0;}
     .need-card .imports {color:#4b40c8; font-weight:700;}
+    .unlock-wrap {padding:1rem 1.1rem; margin:0 0 1.2rem; border:1px solid var(--line); border-radius:17px; background:#fbfbfd;}
+    .unlock-head {display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.75rem;}
+    .unlock-head strong {color:var(--ink);}.unlock-head span {font-size:.77rem; color:var(--muted);}
+    .unlock-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.6rem;}
+    .unlock-item {padding:.78rem .85rem; border-radius:13px; background:white; border:1px solid var(--line);}
+    .unlock-item.ready {border-color:#bce9d1; background:#f5fcf8;}
+    .unlock-item.missing {border-style:dashed; background:#f8f8fb;}
+    .unlock-item b {display:block; font-size:.86rem; margin-bottom:.2rem;}
+    .unlock-item p {font-size:.78rem; line-height:1.4; color:var(--muted); margin:0;}
+    .unlock-item.ready b {color:#137a4b;}.unlock-item.missing b {color:#737b8e;}
     .stButton > button, .stDownloadButton > button {border-radius:11px; font-weight:700; min-height:42px;}
     .stButton > button[kind="primary"] {background:var(--brand); border-color:var(--brand);}
     [data-testid="stDataFrame"] {border:1px solid var(--line); border-radius:14px; overflow:hidden;}
@@ -182,6 +192,35 @@ def render_data_guide() -> None:
             f'<div class="need-card"><span class="emoji">{emoji}</span><strong>{title}</strong>'
             f'<p class="imports">{imports}</p><p>{result}</p></div>', unsafe_allow_html=True,
         )
+
+
+def project_sources(store: Store) -> dict[str, int]:
+    """Retourne la disponibilité des sources qui alimentent les différents modules."""
+    return {
+        "Crawl": scalar(store, "SELECT COUNT(*) FROM pages"),
+        "GSC": scalar(store, "SELECT COUNT(*) FROM gsc"),
+        "Positions Semrush": scalar(store, "SELECT COUNT(*) FROM semrush_keywords"),
+        "Keyword Gap": scalar(store, "SELECT COUNT(*) FROM keyword_gap"),
+        "Backlinks": scalar(store, "SELECT COUNT(*) FROM backlinks"),
+    }
+
+
+def data_unlocks(store: Store, requirements: list[tuple[str, str]]) -> None:
+    """Montre les analyses disponibles et celles à débloquer par un import."""
+    available = project_sources(store)
+    ready = sum(bool(available.get(source)) for source, _ in requirements)
+    items = []
+    for source, benefit in requirements:
+        count = available.get(source, 0)
+        state = "ready" if count else "missing"
+        label = f"✓ {source} · prêt" if count else f"🔒 {source} · à importer"
+        copy = benefit if not count else f"{benefit} ({count:,} lignes disponibles)".replace(",", " ")
+        items.append(f'<div class="unlock-item {state}"><b>{label}</b><p>{copy}</p></div>')
+    st.markdown(
+        f'<div class="unlock-wrap"><div class="unlock-head"><strong>Couverture des données</strong>'
+        f'<span>{ready}/{len(requirements)} sources disponibles · imports dans l’onglet Données</span></div>'
+        f'<div class="unlock-grid">{"".join(items)}</div></div>', unsafe_allow_html=True,
+    )
 
 
 st.markdown("""
@@ -277,6 +316,11 @@ if selected_db:
             "◎", "Pré-audit", "Une photographie simple et partageable des principaux signaux techniques du site.",
             "Lisez d'abord le score global, identifiez la dimension la plus faible, puis ouvrez les actions recommandées.",
         )
+        data_unlocks(store, [
+            ("Crawl", "Débloque les contrôles techniques, statuts HTTP, profondeur et pages orphelines."),
+            ("GSC", "Ajoute la visibilité réelle pour mieux prioriser les problèmes selon leur potentiel."),
+            ("Positions Semrush", "Ajoute les positions et volumes externes pour élargir la lecture des opportunités."),
+        ])
         audit = preaudit.snapshot(store)
         a1, a2, a3, a4 = st.columns(4)
         a1.metric("Score de contrôle", f"{audit['score']}/100")
@@ -323,6 +367,12 @@ if selected_db:
             "✦", "Opportunités de contenu", "Les pistes éditoriales détectées à partir des requêtes et des pages existantes.",
             "Choisissez une vue : créer pour couvrir un manque, optimiser pour gagner des positions, consolider pour éviter la cannibalisation.",
         )
+        data_unlocks(store, [
+            ("Crawl", "Débloque l'analyse des contenus existants, des titles et de la profondeur."),
+            ("GSC", "Débloque les requêtes réelles, pages à optimiser et risques de cannibalisation."),
+            ("Positions Semrush", "Ajoute les mots-clés, volumes et positions suivis hors GSC."),
+            ("Keyword Gap", "Débloque les sujets couverts par les concurrents mais absents du site."),
+        ])
         content_min_impr = st.number_input(
             "Impressions minimales pour les opportunités", min_value=0, value=100,
             step=50, key="content_min_impr",
@@ -368,6 +418,12 @@ if selected_db:
             "⚡", "Priorités", "Votre file de travail SEO, triée pour concentrer l'effort là où il peut avoir le plus d'impact.",
             "Ajustez le seuil d'impressions, filtrez les catégories utiles, puis exportez la sélection pour votre roadmap.",
         )
+        data_unlocks(store, [
+            ("Crawl", "Débloque les actions techniques et éditoriales fondées sur les pages du site."),
+            ("GSC", "Ajoute le potentiel de trafic pour mieux classer les actions."),
+            ("Positions Semrush", "Ajoute une lecture complémentaire des positions et volumes."),
+            ("Keyword Gap", "Ajoute les priorités concurrentielles et les contenus manquants."),
+        ])
         min_impr = st.number_input("Impressions minimales", min_value=0, value=100, step=50)
         recs = recommendations.build(store, int(min_impr))
         categories = sorted(recs["catégorie"].unique()) if len(recs) else []
@@ -384,6 +440,10 @@ if selected_db:
             "↗", "Maillage interne", "Des connexions suggérées entre pages pour mieux distribuer l'autorité et guider les visiteurs.",
             "La source accueille le lien, la cible reçoit l'autorité, l'ancre est le texte à utiliser et le score indique la pertinence.",
         )
+        data_unlocks(store, [
+            ("Crawl", "Débloque la structure actuelle, les liens existants et la proximité sémantique."),
+            ("GSC", "Enrichit les cibles avec les requêtes et pages qui ont déjà un potentiel organique."),
+        ])
         links = store.df(
             """SELECT source, target, anchor, ROUND(score,3) score, evidence contexte
                FROM link_suggestions ORDER BY score DESC"""
@@ -408,6 +468,12 @@ if selected_db:
             "✎", "Atelier de brief", "Transformez un sujet en cadre de rédaction cohérent avec les données déjà collectées.",
             "Saisissez un sujet, vérifiez l'intention détectée, choisissez le format puis générez le document prêt à transmettre.",
         )
+        data_unlocks(store, [
+            ("Crawl", "Débloque les pages internes proches du sujet et les informations du site."),
+            ("GSC", "Ajoute les requêtes réellement associées aux pages existantes."),
+            ("Positions Semrush", "Ajoute les mots-clés, volumes et niveaux de concurrence disponibles."),
+            ("Keyword Gap", "Ajoute les angles et sujets identifiés chez les concurrents."),
+        ])
         keyword = st.text_input("Mot-clé ou sujet", placeholder="ex. assurance hospitalisation")
         kind = st.selectbox("Format demandé", ["Automatique", "Article", "Landing page", "Article sponsorisé"])
         if keyword:
