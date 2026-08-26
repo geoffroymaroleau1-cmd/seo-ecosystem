@@ -49,6 +49,9 @@ def require_password() -> None:
 
 require_password()
 
+if st.session_state.pop("project_created", None):
+    st.toast("Projet créé. Prochaine étape : importez vos données dans l'onglet Données.", icon="✅")
+
 st.markdown("""
 <style>
     :root {--ink:#172033; --muted:#667085; --line:#e8eaf0; --brand:#6558e8; --soft:#f4f2ff;}
@@ -100,10 +103,25 @@ st.markdown("""
     .project-card {padding:.9rem; margin:.5rem 0 1.25rem; background:#232740; border:1px solid #353a59; border-radius:14px;}
     .project-card small {display:block; color:#aeb4d5 !important; margin-bottom:.2rem;}
     .project-card strong {color:white !important; font-size:.92rem;}
+    .setup-flow {display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin:.7rem 0 1.15rem;}
+    .setup-step {position:relative; padding:1.05rem; background:white; border:1px solid var(--line); border-radius:16px;}
+    .setup-step.required {border-color:#cfc9ff; background:linear-gradient(145deg,#fff,#f7f5ff);}
+    .setup-step small {display:block; color:#8a91a3; font-weight:800; letter-spacing:.08em; margin-bottom:.42rem;}
+    .setup-step strong {display:block; color:var(--ink); margin-bottom:.32rem;}
+    .setup-step p {color:var(--muted); font-size:.84rem; line-height:1.45; margin:0;}
+    .source-tag {display:inline-block; margin-top:.65rem; padding:.25rem .52rem; border-radius:99px;
+                 background:#eefbf4; color:#137a4b; font-size:.72rem; font-weight:800;}
+    .source-tag.optional {background:#f1f3f7; color:#626b7f;}
+    .parallel-note {padding:.9rem 1rem; border-radius:14px; color:#4338a8; background:#f3f1ff;
+                    border:1px solid #dedaff; font-size:.9rem; margin-bottom:1.2rem;}
+    .need-card {height:100%; padding:1rem; background:white; border:1px solid var(--line); border-radius:16px;}
+    .need-card .emoji {font-size:1.25rem;}.need-card strong {display:block; margin:.4rem 0;}
+    .need-card p {font-size:.84rem; line-height:1.45; color:var(--muted); margin:.2rem 0;}
+    .need-card .imports {color:#4b40c8; font-weight:700;}
     .stButton > button, .stDownloadButton > button {border-radius:11px; font-weight:700; min-height:42px;}
     .stButton > button[kind="primary"] {background:var(--brand); border-color:var(--brand);}
     [data-testid="stDataFrame"] {border:1px solid var(--line); border-radius:14px; overflow:hidden;}
-    @media(max-width:700px){.hero{padding:1.6rem}.journey{display:none}.section-hero{padding:1rem}.block-container{padding-top:.7rem}}
+    @media(max-width:700px){.hero{padding:1.6rem}.journey{display:none}.section-hero{padding:1rem}.block-container{padding-top:.7rem}.setup-flow{grid-template-columns:1fr}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -127,6 +145,43 @@ def section_intro(icon: str, title: str, description: str, tip: str) -> None:
         f'<h2>{title}</h2><p>{description}</p><div class="section-tip">→ {tip}</div>'
         f'</div></div>', unsafe_allow_html=True,
     )
+
+
+def render_data_guide() -> None:
+    """Explique l'ordre de création et les sources utiles selon l'objectif."""
+    st.markdown("### Comment démarrer sans se tromper ?")
+    st.markdown(
+        """
+        <div class="setup-flow">
+          <div class="setup-step required"><small>ÉTAPE 1 · SOCLE</small><strong>🌐 Lancez le crawl</strong>
+          <p>Entrez l'URL du site. Le crawl crée le projet et collecte les pages, statuts, balises, textes et liens internes.</p>
+          <span class="source-tag">Indispensable</span></div>
+          <div class="setup-step"><small>ÉTAPE 2 · PERFORMANCE</small><strong>📈 Ajoutez GSC</strong>
+          <p>Une fois le projet créé, importez les relations URL × requête pour relier la structure aux clics, impressions et positions.</p>
+          <span class="source-tag">Fortement recommandé</span></div>
+          <div class="setup-step"><small>ÉTAPE 3 · ENRICHISSEMENT</small><strong>🔭 Complétez avec Semrush</strong>
+          <p>Ajoutez seulement les exports nécessaires : positions, Keyword Gap ou backlinks selon la mission.</p>
+          <span class="source-tag optional">Selon le besoin</span></div>
+        </div>
+        <div class="parallel-note"><b>Peut-on préparer les imports en parallèle ?</b> Oui. Pendant le crawl, vous pouvez exporter GSC et Semrush.
+        L'import dans l'application se fait juste après, car le crawl doit d'abord avoir créé la base du projet.</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### Quelles données importer selon votre objectif ?")
+    cols = st.columns(4)
+    needs = [
+        ("🩺", "Audit technique", "Crawl uniquement", "Statuts, balises, profondeur, pages faibles et maillage existant."),
+        ("🚀", "Gagner du trafic", "Crawl + GSC", "Pages à optimiser, requêtes proches du top 10 et cannibalisations."),
+        ("✍️", "Plan éditorial", "Crawl + GSC + Positions", "Sujets, contenus à enrichir et briefs nourris par les performances."),
+        ("🛰️", "Analyse concurrentielle", "Tout + Gap + Backlinks", "Mots-clés manquants, concurrents et signaux off-site."),
+    ]
+    for col, (emoji, title, imports, result) in zip(cols, needs):
+        col.markdown(
+            f'<div class="need-card"><span class="emoji">{emoji}</span><strong>{title}</strong>'
+            f'<p class="imports">{imports}</p><p>{result}</p></div>', unsafe_allow_html=True,
+        )
 
 
 st.markdown("""
@@ -164,6 +219,8 @@ if selected_db:
             "⌂", "Vue d'ensemble", "Le point de départ pour comprendre la santé du projet et choisir votre prochaine étape.",
             "Commencez par les indicateurs rouges, puis ouvrez l'espace qui correspond à votre objectif.",
         )
+        render_data_guide()
+        st.divider()
         st.markdown("### Votre parcours en 4 étapes")
         process_cols = st.columns(4)
         steps = [
@@ -400,9 +457,9 @@ if selected_db:
             col.metric(name, count, "chargé" if count else "manquant")
 
         st.info(
-            "**Parcours recommandé :** 1. lancez le crawl dans Administration ; "
-            "2. importez GSC si disponible ; 3. ajoutez les positions Semrush ; "
-            "4. complétez avec Keyword Gap et Backlinks pour la concurrence et l'off-site."
+            "**Ordre recommandé :** le crawl a déjà créé le socle de ce projet. Importez maintenant "
+            "GSC si disponible, puis ajoutez les exports Semrush utiles à votre objectif. "
+            "Ces imports sont indépendants entre eux : vous pourrez revenir les compléter plus tard."
         )
 
         def save_upload(upload):
@@ -500,6 +557,9 @@ with tabs[7]:
         "⚙", "Projet & crawl", "Créez un espace isolé par domaine ou actualisez les données techniques d'un site existant.",
         "Indiquez l'URL complète, fixez une limite adaptée à la taille du site, puis gardez la page ouverte pendant le crawl.",
     )
+    render_data_guide()
+    st.divider()
+    st.markdown("### Créer le socle technique")
     site_url = st.text_input("URL du site", placeholder="https://exemple.fr")
     max_pages = st.number_input("Maximum d'URL", min_value=10, max_value=10000, value=300, step=50)
     if st.button("Lancer le crawl", disabled=not bool(site_url)):
@@ -515,6 +575,7 @@ with tabs[7]:
                 st.exception(exc)
             else:
                 st.success(f"Projet créé : {relative_db}")
+                st.session_state["project_created"] = str(relative_db)
                 st.rerun()
 
 st.sidebar.markdown("---")
