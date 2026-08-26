@@ -51,23 +51,59 @@ require_password()
 
 st.markdown("""
 <style>
-    [data-testid="stHeader"] {background: rgba(255,255,255,.88); backdrop-filter: blur(10px);}
-    .block-container {padding-top: 2rem; padding-bottom: 4rem; max-width: 1450px;}
-    .hero {padding: 2rem 2.2rem; border-radius: 24px; color: white; margin-bottom: 1.2rem;
-           background: linear-gradient(125deg,#172554 0%,#4338ca 55%,#7c3aed 100%);
-           box-shadow: 0 18px 45px rgba(49,46,129,.22);}
-    .hero h1 {font-size: 2.25rem; margin: 0 0 .4rem 0; color: white;}
-    .hero p {font-size: 1.05rem; opacity: .9; margin: 0; max-width: 850px;}
-    .process-card {border: 1px solid #e2e8f0; border-radius: 18px; padding: 1.15rem;
-                   min-height: 145px; background: linear-gradient(180deg,#fff,#f8fafc);}
-    .process-card .number {display:inline-block; color:#4338ca; background:#eef2ff;
-                          border-radius:999px; padding:.2rem .65rem; font-weight:700;}
-    .process-card h3 {font-size:1.02rem; margin:.75rem 0 .35rem;}
-    .process-card p {color:#64748b; font-size:.9rem; margin:0;}
-    [data-testid="stMetric"] {background:white; border:1px solid #e2e8f0; padding:1rem;
-                             border-radius:16px; box-shadow:0 7px 20px rgba(15,23,42,.05);}
-    .need-box {padding:1rem 1.1rem; border-left:4px solid #6366f1; background:#f8fafc;
-               border-radius:0 14px 14px 0; margin:.35rem 0;}
+    :root {--ink:#172033; --muted:#667085; --line:#e8eaf0; --brand:#6558e8; --soft:#f4f2ff;}
+    .stApp {background:linear-gradient(180deg,#f7f8fc 0,#fff 420px); color:var(--ink);}
+    [data-testid="stHeader"] {background:rgba(247,248,252,.78); backdrop-filter:blur(14px);}
+    [data-testid="stSidebar"] {background:#15182b; border-right:0;}
+    [data-testid="stSidebar"] * {color:#eef0ff;}
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {background:#232740; border-color:#353a59;}
+    .block-container {padding-top:1.35rem; padding-bottom:4rem; max-width:1480px;}
+    .hero {position:relative; overflow:hidden; padding:2.2rem 2.4rem; border-radius:28px; color:white;
+           margin-bottom:1.25rem; background:linear-gradient(125deg,#15182b 0%,#4038a8 58%,#7869ef 100%);
+           box-shadow:0 22px 60px rgba(48,43,130,.23);}
+    .hero:after {content:""; position:absolute; width:360px; height:360px; right:-90px; top:-190px;
+                 border:1px solid rgba(255,255,255,.22); border-radius:50%; box-shadow:0 0 0 55px rgba(255,255,255,.04),0 0 0 110px rgba(255,255,255,.035);}
+    .hero-kicker {font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+                  color:#c9c5ff; margin-bottom:.65rem;}
+    .hero h1 {font-size:clamp(2rem,4vw,3.25rem); line-height:1.03; letter-spacing:-.045em; margin:0 0 .65rem; color:white;}
+    .hero p {font-size:1.02rem; line-height:1.65; opacity:.86; margin:0; max-width:760px;}
+    .hero-badge {display:inline-flex; margin-top:1.25rem; padding:.45rem .75rem; border-radius:99px;
+                 background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); font-size:.78rem;}
+    .journey {display:flex; gap:.5rem; align-items:center; margin:.25rem 0 1.15rem; color:var(--muted); font-size:.78rem; font-weight:700;}
+    .journey span {padding:.42rem .7rem; border-radius:99px; background:white; border:1px solid var(--line);}
+    .journey b {color:#b1b5c2;}
+    div[data-baseweb="tab-list"] {gap:.4rem; background:white; padding:.5rem; border:1px solid var(--line);
+                                  border-radius:16px; box-shadow:0 8px 26px rgba(24,32,51,.06); overflow-x:auto;}
+    button[data-baseweb="tab"] {height:42px; border-radius:11px; padding:0 .85rem; color:#667085; white-space:nowrap;}
+    button[data-baseweb="tab"][aria-selected="true"] {background:var(--soft); color:#4b40c8; font-weight:750;}
+    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {display:none;}
+    .section-hero {display:flex; gap:1rem; align-items:flex-start; padding:1.35rem 1.5rem; margin:1rem 0 1.15rem;
+                   background:white; border:1px solid var(--line); border-radius:20px; box-shadow:0 8px 24px rgba(24,32,51,.045);}
+    .section-icon {display:flex; flex:0 0 46px; height:46px; align-items:center; justify-content:center; border-radius:14px;
+                   background:var(--soft); font-size:1.35rem;}
+    .section-hero h2 {font-size:1.32rem; letter-spacing:-.025em; margin:0 0 .25rem; color:var(--ink);}
+    .section-hero p {margin:0; color:var(--muted); line-height:1.5;}
+    .section-tip {margin-top:.55rem; color:#4b40c8; font-size:.82rem; font-weight:650;}
+    .process-card {border:1px solid var(--line); border-radius:18px; padding:1.2rem; min-height:160px;
+                   background:white; box-shadow:0 7px 22px rgba(24,32,51,.04); transition:.2s ease;}
+    .process-card:hover {transform:translateY(-3px); box-shadow:0 13px 30px rgba(48,43,130,.10); border-color:#d8d3ff;}
+    .process-card .number {display:inline-grid; place-items:center; color:#4b40c8; background:var(--soft);
+                          border-radius:10px; width:34px; height:34px; font-weight:800;}
+    .process-card h3 {font-size:1.02rem; margin:.8rem 0 .35rem;}
+    .process-card p {color:var(--muted); font-size:.89rem; line-height:1.5; margin:0;}
+    [data-testid="stMetric"] {background:white; border:1px solid var(--line); padding:1rem 1.1rem;
+                             border-radius:16px; box-shadow:0 7px 20px rgba(15,23,42,.045);}
+    [data-testid="stMetricLabel"] {color:var(--muted);}
+    .need-box {padding:1rem 1.1rem; border:1px solid var(--line); background:white; border-radius:16px;
+               margin:.35rem 0; min-height:92px; box-shadow:0 6px 18px rgba(24,32,51,.035);}
+    .need-box b {color:#4b40c8; display:inline-block; margin-bottom:.25rem;}
+    .project-card {padding:.9rem; margin:.5rem 0 1.25rem; background:#232740; border:1px solid #353a59; border-radius:14px;}
+    .project-card small {display:block; color:#aeb4d5 !important; margin-bottom:.2rem;}
+    .project-card strong {color:white !important; font-size:.92rem;}
+    .stButton > button, .stDownloadButton > button {border-radius:11px; font-weight:700; min-height:42px;}
+    .stButton > button[kind="primary"] {background:var(--brand); border-color:var(--brand);}
+    [data-testid="stDataFrame"] {border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+    @media(max-width:700px){.hero{padding:1.6rem}.journey{display:none}.section-hero{padding:1rem}.block-container{padding-top:.7rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -84,12 +120,24 @@ def safe_name(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_.-]+", "-", value).strip("-.") or "gsc.csv"
 
 
+def section_intro(icon: str, title: str, description: str, tip: str) -> None:
+    """Affiche le mode d'emploi compact de chaque espace de travail."""
+    st.markdown(
+        f'<div class="section-hero"><div class="section-icon">{icon}</div><div>'
+        f'<h2>{title}</h2><p>{description}</p><div class="section-tip">→ {tip}</div>'
+        f'</div></div>', unsafe_allow_html=True,
+    )
+
+
 st.markdown("""
 <div class="hero">
+  <div class="hero-kicker">Votre cockpit de croissance organique</div>
   <h1>SEO Ecosystem</h1>
-  <p>Transformez un crawl et vos données SEO en diagnostics visuels, opportunités éditoriales,
-  recommandations de maillage et briefs directement actionnables.</p>
+  <p>Du signal brut à la prochaine action : explorez votre site, comprenez ce qui freine sa visibilité
+  et transformez chaque insight en décision SEO concrète.</p>
+  <div class="hero-badge">✦ Crawl · Search Console · Sémantique · Contenu</div>
 </div>
+<div class="journey"><span>01 · Diagnostiquer</span><b>›</b><span>02 · Décider</span><b>›</b><span>03 · Agir</span><b>›</b><span>04 · Mesurer</span></div>
 """, unsafe_allow_html=True)
 
 dbs = databases()
@@ -100,16 +148,23 @@ else:
     labels = {p.name: p for p in dbs}
     selected_name = st.sidebar.selectbox("Client / base", list(labels), index=0)
     selected_db = labels[selected_name]
-    st.sidebar.caption(str(selected_db.relative_to(ROOT)))
+    st.sidebar.markdown(
+        f'<div class="project-card"><small>PROJET ACTIF</small><strong>{selected_db.stem}</strong></div>',
+        unsafe_allow_html=True,
+    )
 
-tabs = st.tabs(["Accueil", "Pré-audit", "Opportunités contenu", "Priorités", "Maillage",
-                "Brief", "Sources de données", "Administration"])
+tabs = st.tabs(["⌂  Vue d'ensemble", "◎  Pré-audit", "✦  Opportunités", "⚡  Priorités", "↗  Maillage",
+                "✎  Brief", "⊕  Données", "⚙  Projet"])
 
 if selected_db:
     store = Store(selected_db)
 
     with tabs[0]:
-        st.subheader("Comment utiliser l'outil ?")
+        section_intro(
+            "⌂", "Vue d'ensemble", "Le point de départ pour comprendre la santé du projet et choisir votre prochaine étape.",
+            "Commencez par les indicateurs rouges, puis ouvrez l'espace qui correspond à votre objectif.",
+        )
+        st.markdown("### Votre parcours en 4 étapes")
         process_cols = st.columns(4)
         steps = [
             ("01", "Créer ou choisir un projet", "Un domaine correspond à une base client séparée."),
@@ -123,7 +178,7 @@ if selected_db:
                 f'<h3>{title}</h3><p>{copy}</p></div>', unsafe_allow_html=True,
             )
 
-        st.subheader("Choisissez selon votre besoin")
+        st.markdown("### Quel est votre objectif aujourd'hui ?")
         n1, n2, n3 = st.columns(3)
         n1.markdown('<div class="need-box"><b>Convaincre un prospect</b><br>Ouvrez Pré-audit pour une synthèse illustrée et téléchargeable.</div>', unsafe_allow_html=True)
         n2.markdown('<div class="need-box"><b>Trouver de la croissance</b><br>Ouvrez Opportunités contenu pour créer, optimiser ou consolider.</div>', unsafe_allow_html=True)
@@ -161,8 +216,10 @@ if selected_db:
         st.dataframe(top, width="stretch", hide_index=True)
 
     with tabs[1]:
-        st.subheader("Pré-audit avant-vente")
-        st.caption("Une lecture rapide, illustrée et explicable des principaux signaux du site.")
+        section_intro(
+            "◎", "Pré-audit", "Une photographie simple et partageable des principaux signaux techniques du site.",
+            "Lisez d'abord le score global, identifiez la dimension la plus faible, puis ouvrez les actions recommandées.",
+        )
         audit = preaudit.snapshot(store)
         a1, a2, a3, a4 = st.columns(4)
         a1.metric("Score de contrôle", f"{audit['score']}/100")
@@ -205,8 +262,10 @@ if selected_db:
         st.info("Le score est une synthèse interne des contrôles affichés, pas une note Google.")
 
     with tabs[2]:
-        st.subheader("Opportunités de création et d'optimisation")
-        st.caption("Vue éditoriale uniquement : les erreurs techniques restent dans Priorités.")
+        section_intro(
+            "✦", "Opportunités de contenu", "Les pistes éditoriales détectées à partir des requêtes et des pages existantes.",
+            "Choisissez une vue : créer pour couvrir un manque, optimiser pour gagner des positions, consolider pour éviter la cannibalisation.",
+        )
         content_min_impr = st.number_input(
             "Impressions minimales pour les opportunités", min_value=0, value=100,
             step=50, key="content_min_impr",
@@ -248,7 +307,10 @@ if selected_db:
         )
 
     with tabs[3]:
-        st.subheader("File d'actions priorisée")
+        section_intro(
+            "⚡", "Priorités", "Votre file de travail SEO, triée pour concentrer l'effort là où il peut avoir le plus d'impact.",
+            "Ajustez le seuil d'impressions, filtrez les catégories utiles, puis exportez la sélection pour votre roadmap.",
+        )
         min_impr = st.number_input("Impressions minimales", min_value=0, value=100, step=50)
         recs = recommendations.build(store, int(min_impr))
         categories = sorted(recs["catégorie"].unique()) if len(recs) else []
@@ -261,7 +323,10 @@ if selected_db:
         st.caption("Les intentions sont des inférences avec un niveau de confiance, pas des certitudes SERP.")
 
     with tabs[4]:
-        st.subheader("Suggestions de maillage")
+        section_intro(
+            "↗", "Maillage interne", "Des connexions suggérées entre pages pour mieux distribuer l'autorité et guider les visiteurs.",
+            "La source accueille le lien, la cible reçoit l'autorité, l'ancre est le texte à utiliser et le score indique la pertinence.",
+        )
         links = store.df(
             """SELECT source, target, anchor, ROUND(score,3) score, evidence contexte
                FROM link_suggestions ORDER BY score DESC"""
@@ -282,7 +347,10 @@ if selected_db:
             st.rerun()
 
     with tabs[5]:
-        st.subheader("Brief à la demande")
+        section_intro(
+            "✎", "Atelier de brief", "Transformez un sujet en cadre de rédaction cohérent avec les données déjà collectées.",
+            "Saisissez un sujet, vérifiez l'intention détectée, choisissez le format puis générez le document prêt à transmettre.",
+        )
         keyword = st.text_input("Mot-clé ou sujet", placeholder="ex. assurance hospitalisation")
         kind = st.selectbox("Format demandé", ["Automatique", "Article", "Landing page", "Article sponsorisé"])
         if keyword:
@@ -314,10 +382,9 @@ if selected_db:
                 )
 
     with tabs[6]:
-        st.subheader("Sources de données")
-        st.caption(
-            "Ajoutez seulement les sources dont vous disposez. Le crawl est le socle ; "
-            "GSC et Semrush enrichissent progressivement l'analyse."
+        section_intro(
+            "⊕", "Sources de données", "Enrichissez progressivement l'analyse : le crawl est le socle, GSC et Semrush ajoutent la performance et la concurrence.",
+            "Les compteurs ci-dessous montrent immédiatement ce qui est prêt. Importez seulement les sources dont vous disposez.",
         )
 
         st.markdown("#### Où en est ce projet ?")
@@ -429,7 +496,10 @@ else:
             st.info("Crée d'abord un projet dans Administration.")
 
 with tabs[7]:
-    st.subheader("Créer ou actualiser un projet")
+    section_intro(
+        "⚙", "Projet & crawl", "Créez un espace isolé par domaine ou actualisez les données techniques d'un site existant.",
+        "Indiquez l'URL complète, fixez une limite adaptée à la taille du site, puis gardez la page ouverte pendant le crawl.",
+    )
     site_url = st.text_input("URL du site", placeholder="https://exemple.fr")
     max_pages = st.number_input("Maximum d'URL", min_value=10, max_value=10000, value=300, step=50)
     if st.button("Lancer le crawl", disabled=not bool(site_url)):
